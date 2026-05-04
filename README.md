@@ -1,5 +1,16 @@
 # PrintSimp Pro: User Guide
-    
+
+PrintSimp Pro is a lightweight, open-source productivity tool for Windows designed to streamline screen capturing. It eliminates the extra steps of traditional snipping tools by allowing you to instantly select a region, save it to your drive, and copy it to your clipboard with a single keyboard shortcut.
+
+- Speed-Focused: Triggered instantly via Ctrl + Shift + P.
+
+- Dual-Action: Simultaneously saves a high-quality PNG to your Pictures/Screenshots folder and stores the image in your clipboard for immediate pasting.
+
+- Minimalist Design: Runs silently in the background with no intrusive windows or complex menus.
+
+- Smart Selection: Features a visual crosshair and a red-boundary selector for pixel-perfect captures.
+
+--------------------------------
 1. Installation & Setup
 
     Run the Executable: Open the PrintSimp.exe file. The program runs silently in the background and does not open a visible window upon startup.
