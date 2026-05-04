@@ -4,6 +4,7 @@
 
 import io
 import queue
+import time
 import tkinter as tk
 from datetime import datetime
 from pathlib import Path
@@ -66,8 +67,9 @@ class AreaSelector:
     def _on_release(self, event):
         end_x, end_y = event.x, event.y
         self.canvas.configure(bg="white")
-        self.root.update()
-        self.root.after(100)
+        self.root.after(100, lambda: self._finish(end_x, end_y))
+
+    def _finish(self, end_x, end_y):
         self.root.destroy()
         _save_and_copy(self.image, self.start_x, self.start_y, end_x, end_y)
 
@@ -96,10 +98,18 @@ def _copy_to_clipboard(img):
     data = output.getvalue()[14:]  # strip 14-byte BMP file header, keep the DIB payload
     output.close()
 
-    win32clipboard.OpenClipboard()
-    win32clipboard.EmptyClipboard()
-    win32clipboard.SetClipboardData(win32clipboard.CF_DIB, data)
-    win32clipboard.CloseClipboard()
+    for attempt in range(3):
+        try:
+            win32clipboard.OpenClipboard()
+            try:
+                win32clipboard.EmptyClipboard()
+                win32clipboard.SetClipboardData(win32clipboard.CF_DIB, data)
+            finally:
+                win32clipboard.CloseClipboard()
+            return
+        except Exception:
+            if attempt < 2:
+                time.sleep(0.05)
 
 
 def main():
