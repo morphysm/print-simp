@@ -41,6 +41,10 @@ class AreaSelector:
         self.tk_image = ImageTk.PhotoImage(image)
         self.canvas.create_image(0, 0, anchor="nw", image=self.tk_image)
 
+        # Dark tint overlay to signal the tool is active
+        w, h = image.width, image.height
+        self.canvas.create_rectangle(0, 0, w, h, fill="black", stipple="gray25", outline="")
+
         self.start_x = self.start_y = 0
         self.rect = None
 
@@ -61,6 +65,9 @@ class AreaSelector:
 
     def _on_release(self, event):
         end_x, end_y = event.x, event.y
+        self.canvas.configure(bg="white")
+        self.root.update()
+        self.root.after(100)
         self.root.destroy()
         _save_and_copy(self.image, self.start_x, self.start_y, end_x, end_y)
 
