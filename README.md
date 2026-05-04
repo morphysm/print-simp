@@ -1,4 +1,4 @@
- PrintSimp Pro: User Guide
+# PrintSimp Pro: User Guide
     
 1. Installation & Setup
 
