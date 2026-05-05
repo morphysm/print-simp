@@ -5,15 +5,19 @@
 import ctypes
 import io
 import logging
+import os
 import queue
+import subprocess
+import threading
 import time
 import tkinter as tk
 from datetime import datetime
 from pathlib import Path
 
 import mss
+import pystray
 from pynput import keyboard
-from PIL import Image, ImageTk
+from PIL import Image, ImageDraw, ImageTk
 import win32clipboard
 
 logging.basicConfig(level=logging.ERROR)
@@ -127,6 +131,44 @@ def _copy_to_clipboard(img):
     logging.error("Failed to copy image to clipboard after 3 attempts")
 
 
+def _make_scissors_icon():
+    img = Image.new("RGBA", (32, 32), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    c = (180, 180, 180, 255)
+    draw.ellipse((1, 1, 13, 13), outline=c, width=2)   # top finger ring
+    draw.ellipse((1, 19, 13, 31), outline=c, width=2)  # bottom finger ring
+    draw.ellipse((14, 14, 18, 18), fill=c)             # pivot dot
+    draw.line((7, 7, 31, 1), fill=c, width=2)          # top blade
+    draw.line((7, 25, 31, 31), fill=c, width=2)        # bottom blade
+    return img
+
+
+def _start_tray(listener):
+    def take_screenshot(icon, item):
+        if not _is_selecting:
+            _capture_queue.put(True)
+
+    def open_folder(icon, item):
+        subprocess.Popen(["explorer", str(SAVE_FOLDER)])
+
+    def quit_app(icon, item):
+        icon.stop()
+        listener.stop()
+        os._exit(0)
+
+    icon = pystray.Icon(
+        "PrintSimp Pro",
+        _make_scissors_icon(),
+        "PrintSimp Pro",
+        menu=pystray.Menu(
+            pystray.MenuItem("Take Screenshot", take_screenshot),
+            pystray.MenuItem("Open Screenshots Folder", open_folder),
+            pystray.MenuItem("Quit", quit_app),
+        ),
+    )
+    icon.run()
+
+
 def main():
     global _is_selecting
 
@@ -138,6 +180,8 @@ def main():
 
     listener = keyboard.GlobalHotKeys({"<ctrl>+<shift>+p": _on_hotkey})
     listener.start()
+
+    threading.Thread(target=_start_tray, args=(listener,), daemon=True).start()
 
     # tkinter must run on the main thread on Windows — hotkey pushes a signal,
     # main thread polls and opens the selector here instead of in a daemon thread
