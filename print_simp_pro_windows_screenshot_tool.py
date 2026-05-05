@@ -2,7 +2,9 @@
 # Ctrl+Shift+P: drag to select region → auto-save to Pictures/Screenshots + clipboard copy
 # Runs silently in background; Escape cancels a selection
 
+import ctypes
 import io
+import logging
 import queue
 import time
 import tkinter as tk
@@ -14,10 +16,20 @@ from pynput import keyboard
 from PIL import Image, ImageTk
 import win32clipboard
 
+logging.basicConfig(level=logging.ERROR)
+
 SAVE_FOLDER = Path.home() / "Pictures" / "Screenshots"
 SAVE_FOLDER.mkdir(parents=True, exist_ok=True)
 
 _capture_queue = queue.Queue()
+_is_selecting = False
+
+
+def _set_dpi_aware():
+    try:
+        ctypes.windll.user32.SetProcessDpiAwarenessContext(-4)  # DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
+    except (AttributeError, OSError):
+        ctypes.windll.user32.SetProcessDPIAware()
 
 
 class ScreenCapture:
@@ -66,10 +78,6 @@ class AreaSelector:
 
     def _on_release(self, event):
         end_x, end_y = event.x, event.y
-        self.canvas.configure(bg="white")
-        self.root.after(100, lambda: self._finish(end_x, end_y))
-
-    def _finish(self, end_x, end_y):
         self.root.destroy()
         _save_and_copy(self.image, self.start_x, self.start_y, end_x, end_y)
 
@@ -85,11 +93,17 @@ def _save_and_copy(image, x1, y1, x2, y2):
 
     cropped = image.crop((x, y, x + w, y + h))
 
-    filename = datetime.now().strftime("screenshot_%Y%m%d_%H%M%S.png")
+    filename = datetime.now().strftime("screenshot_%Y%m%d_%H%M%S_%f.png")
     path = SAVE_FOLDER / filename
-    cropped.save(path)
+    try:
+        cropped.save(path)
+    except Exception as e:
+        logging.error("Failed to save screenshot: %s", e)
 
-    _copy_to_clipboard(cropped)
+    try:
+        _copy_to_clipboard(cropped)
+    except Exception as e:
+        logging.error("Failed to copy to clipboard: %s", e)
 
 
 def _copy_to_clipboard(img):
@@ -107,14 +121,20 @@ def _copy_to_clipboard(img):
             finally:
                 win32clipboard.CloseClipboard()
             return
-        except Exception:
+        except Exception as e:
             if attempt < 2:
                 time.sleep(0.05)
+    logging.error("Failed to copy image to clipboard after 3 attempts")
 
 
 def main():
+    global _is_selecting
+
+    _set_dpi_aware()
+
     def _on_hotkey():
-        _capture_queue.put(True)
+        if not _is_selecting:
+            _capture_queue.put(True)
 
     listener = keyboard.GlobalHotKeys({"<ctrl>+<shift>+p": _on_hotkey})
     listener.start()
@@ -127,8 +147,10 @@ def main():
         except queue.Empty:
             continue
 
+        _is_selecting = True
         img = ScreenCapture().grab_fullscreen()
         AreaSelector(img).run()
+        _is_selecting = False
 
 
 if __name__ == "__main__":
