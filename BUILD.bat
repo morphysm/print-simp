@@ -18,7 +18,7 @@ pyinstaller --onefile --noconsole --name PrintSimpPro ^
   --hidden-import win32clipboard ^
   --hidden-import win32api ^
   --hidden-import pywintypes ^
-  print_simp_pro_windows_screenshot_tool.py
+  print_simp_pro_v2.py
 if %errorlevel% neq 0 (
     echo ERROR: Build failed. See output above for details.
     pause
